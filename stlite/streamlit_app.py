@@ -28,7 +28,7 @@ def pyodide_fetch(
     # url_quoted = quote(url, safe=",/")
     print(url)
     # https://pyodide.org/en/stable/usage/api/python-api/http.html#pyodide.http.open_url
-    resp = open_url(f"https://thomasht86--mattemix-solver-wrapper-dev.modal.run/{url}")
+    resp = open_url(f"https://thomasht86--mattemix-solver-wrapper.modal.run/{url}")
     # resp is a io.StringIO object. Convert to json
     text = resp.getvalue()
     return json.loads(text)
