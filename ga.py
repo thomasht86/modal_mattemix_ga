@@ -9,28 +9,15 @@ from fastapi import Query
 
 stub = modal.Stub("mattemix-solver")
 
-image = modal.Image.conda().conda_install(["numba"], channels=["conda-forge"]).pip_install("numpy")
+image = (
+    modal.Image.conda()
+    .conda_install(["numba"], channels=["conda-forge"])
+    .pip_install("numpy")
+)
 
 stub.dict = modal.Dict()
 
-
-# Modal works with any [ASGI](/docs/guide/webhooks#serving-asgi-and-wsgi-apps) or
-# [WSGI](/docs/guide/webhooks#wsgi) web framework. Here, we choose to use [FastAPI](https://fastapi.tiangolo.com/).
-
 web_app = fastapi.FastAPI()
-
-# ## Define endpoints
-#
-# We need two endpoints: one to accept an image and submit it to the Modal job queue,
-# and another to poll for the results of the job.
-#
-# In `parse`, we're going to submit tasks to the function defined in the [Job
-# Queue tutorial](/docs/guide/ex/doc_ocr_jobs), so we import it first using
-# [`modal.lookup`](/docs/reference/modal.lookup).
-#
-# We call [`.spawn()`](/docs/reference/modal.Function#spawn) on the function handle
-# we imported above, to kick off our function without blocking on the results. `spawn` returns
-# a unique ID for the function call, that we can use later to poll for its result.
 
 
 @stub.function(image=image, mounts=modal.create_package_mounts(["population"]))
@@ -56,7 +43,13 @@ def find_solution(seed, call_id: str):
     # Convert comma separated string to list of ints
     dice_roll = [int(x) for x in dice_roll.split(",")]
     print(dice_roll)
-    pop = Population(size, dice_throw=dice_roll, mut_rate=mut_rate, cross_rate=cross_rate, elite_rate=elite_rate)
+    pop = Population(
+        size,
+        dice_throw=dice_roll,
+        mut_rate=mut_rate,
+        cross_rate=cross_rate,
+        elite_rate=elite_rate,
+    )
 
     start_time = time.time()
     while time.time() - start_time < max_time:
@@ -76,7 +69,6 @@ def find_solution(seed, call_id: str):
         update_dict.update(
             {
                 "time_left": int(max([max_time - (time.time() - start_time), 0])),
-                "correct_equations": correct_equations,
                 "num_tested": update_dict.get("num_tested") + pop.generation * size,
             }
         )
@@ -89,17 +81,6 @@ def find_solution(seed, call_id: str):
     print("Final test_dict:")
     print(test_dict)
     return
-
-
-# @web_app.get("/dice_roll")
-# async def get_dice_roll():
-#     """Return a random dice roll
-
-#     Returns:
-#         str: comma separated string of dice roll
-#     """
-#     dice_roll = [random.randint(1, 15) for _ in range(14)]
-#     return {"dice_roll": ",".join([str(x) for x in dice_roll])}
 
 
 @web_app.get("/solve")
@@ -157,10 +138,6 @@ async def poll_results(call_id: str):
     import time
 
     caller_dict = container_app.dict.get(call_id)
-    # Sleep a little as frontend only runs in main thread in browser
-    # time.sleep(2)
-    assert type(caller_dict) == dict, "caller_dict is not a dict"
-
     return caller_dict
 
 
@@ -170,7 +147,6 @@ assets_path = Path(__file__).parent / "stlite"
 @stub.asgi(image=image, mounts=[modal.Mount("/assets", local_dir=assets_path)])
 def wrapper():
     web_app.mount("/", fastapi.staticfiles.StaticFiles(directory="/assets", html=True))
-
     return web_app
 
 

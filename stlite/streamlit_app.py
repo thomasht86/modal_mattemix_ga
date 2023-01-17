@@ -12,6 +12,9 @@ import sys
 from urllib.parse import quote
 import urllib
 
+SITE_URL = "https://thomasht86--mattemix-solver-wrapper.modal.run"
+
+
 if sys.platform == "emscripten":
     # running in Pyodide or other Emscripten based build
     PYODIDE = True
@@ -20,7 +23,11 @@ if sys.platform == "emscripten":
 
 
 def pyodide_fetch(
-    url, method="GET", body: dict = {}, credentials="same-origin", headers={"Content-Type": "application/json"}
+    url,
+    method="GET",
+    body: dict = {},
+    credentials="same-origin",
+    headers={"Content-Type": "application/json"},
 ):
     # Function to open a URL in Pyodide
     from pyodide.http import open_url
@@ -28,25 +35,26 @@ def pyodide_fetch(
     # url_quoted = quote(url, safe=",/")
     print(url)
     # https://pyodide.org/en/stable/usage/api/python-api/http.html#pyodide.http.open_url
-    resp = open_url(f"https://thomasht86--mattemix-solver-wrapper.modal.run/{url}")
+    resp = open_url(f"{SITE_URL}/{url}")
     # resp is a io.StringIO object. Convert to json
     text = resp.getvalue()
     return json.loads(text)
 
 
-st.set_page_config(layout="centered", page_title="Mattemix puzzle solver 🎲⌛", page_icon="🎲")
+st.set_page_config(
+    layout="centered", page_title="Mattemix puzzle solver 🎲⌛", page_icon="🎲"
+)
+
 
 # Get query parameters and display them
-query_params = st.experimental_get_query_params()
-if query_params:
-    st.write(query_params)
+# query_params = st.experimental_get_query_params()
+# if query_params:
+#     st.write(query_params)
 
 with st.expander("About the game"):
     st.title("Mattemix")
-    st.image(
-        "https://lh3.googleusercontent.com/pDe2u87XMMDlbPnnrkKbFSlIxmMSptVR-5ZVtypH6g3MFbpYyjibqd4lrO3E4dUn8cazUUZvSwK0a0H5JlKT3IQr3grXAXE49fZ0EF-GjqL0uwZ9kSfRF288AIgHoW174-zPczuyyZEdmQDo4AOUgMzcXPG3SmxNAHnr0mBWNkU0V_SJhA2LG64dGeBlosgBl0CJGPksRu90VczUeNp1M8KRDJ0WCi42e9aIygh70MJv9aHFuAe7Ar2WfbQJ1iNJb4FJi3kmAJKW2UdCm-10VjluHBS-0OZ3jH-dT_a3NBEyhH21VvLbxqd63lVLSt_VtyajeGAqUKxgWYpwPyGzJlYhh2dCBWf0XS5CQIE-YF-5xlNi0eY8XLNe5tVl7_zgBJ9FmGxbQEWeFMzEdkE0q6oFJLfetUBAABiqa59KsyJ9A9K3ZKbD0stWeBdVnlcakU8iy7aV6RSGSMAfMEmZ3-xrqU0wvTB34EBLUrO2LsNBwfv1LPD76vhlg0GT3rpYdTGtCOLvd2SW0MXPRSZKeN9GK5s_n6w_m1XeS1gzsqX4hexX0Uctmu6hqWbmK4hhohMoFLcLw3muS0rLhnlYCly0eq80CVPKpqhy8t7tX9ZYN3Ph6wBBB6GX1yR-3q20OSlFcVdGYVltDl4Oc03ksh3fAfLd8c-unjlTaIADoPBz7nLYQfzO03S2FqP4N-aUUIlQUhloB49SpobHnTbtqPLMDCi91RCJdLeAKH45bfmXeQhcQnZU_dvvy3hk5GfSeE9xvj_7upFOKCApkZNdgaxzbcpVZfpI2vkx7le_orgufxkPnlujNpHA3x-XNfTMuh4YCE4v3r5A1gW_sxjE6n6MilMHj39JxaNE5PiDJTP47JoGnQxypXGpF9E1mT6mo8L84wlgBU_IgMWGRYFNKi5TFJsGhWHuwOw4TDbat3XXUA=w569-h439-no?authuser=0"
-    )
-    st.markdown(
+    st.image(f"{SITE_URL}/mattemix.png")
+    st.write(
         """
     Mattemix is a puzzle game where the goal is to place 14 dice on a board in 
     order to solve as many as possible of the 4 equations on the board.
@@ -59,23 +67,6 @@ with st.expander("About the game"):
 def get_roll():
     roll = np.random.choice([str(i) for i in range(1, 16)], 14, replace=True)
     return roll
-
-
-def make_grid(cols, rows):
-    grid = [0] * cols
-    for i in range(cols):
-        with st.container():
-            grid[i] = st.columns(rows)
-    return grid
-
-
-def write_grid(cols, rows, dice_array):
-    grid = make_grid(rows, cols)
-    for r in range(rows):
-        for c in range(cols):
-            num = (r * cols) + c
-            grid[r][c].button(f"{dice_array[num]}", key=f"{r}_{c}+", disabled=True)
-    return
 
 
 def check_solution(dice_array):
@@ -92,11 +83,15 @@ def check_solution(dice_array):
     if eq2:
         correct_equations[1] = True
         score += sum(dice_array[3:6])
-    eq3 = (dice_array[6] / dice_array[7]) == ((dice_array[8] + dice_array[9]) | (dice_array[8]) - (dice_array[9]))
+    eq3 = (dice_array[6] / dice_array[7]) == (
+        (dice_array[8] + dice_array[9]) | (dice_array[8]) - (dice_array[9])
+    )
     if eq3:
         correct_equations[2] = True
         score += sum(dice_array[6:10])
-    eq4 = (dice_array[10] * dice_array[11]) == (dice_array[12] + dice_array[13]) | (dice_array[12] - dice_array[13])
+    eq4 = (dice_array[10] * dice_array[11]) == (dice_array[12] + dice_array[13]) | (
+        dice_array[12] - dice_array[13]
+    )
     if eq4:
         correct_equations[3] = True
         score += sum(dice_array[10:])
@@ -146,16 +141,28 @@ with st.sidebar:
         st.markdown("## Set parameters for the Genetic Algorithm Solver 🧬")
         cols = st.columns(2)
         with cols[0]:
-            pop_size = st.slider("pop_size", value=50000, max_value=100000, min_value=1000, step=1000)
+            pop_size = st.slider(
+                "pop_size", value=50000, max_value=100000, min_value=1000, step=1000
+            )
             timeout = st.number_input("timeout", min_value=5, max_value=60, value=60)
             num_populations = st.number_input(
-                "num_populations", help="Number of parallel populations to spawn", min_value=1, max_value=3, value=1
+                "num_populations",
+                help="Number of parallel populations to spawn",
+                min_value=1,
+                max_value=3,
+                value=1,
             )
 
         with cols[1]:
-            mut_rate = st.number_input("mutation_rate", value=0.05, min_value=0.05, max_value=0.9, step=0.05)
-            cross_rate = st.number_input("crossover_rate", value=0.1, min_value=0.05, max_value=0.9, step=0.1)
-            elite_rate = st.number_input("elite_rate", value=0.1, min_value=0.05, max_value=0.9, step=0.1)
+            mut_rate = st.number_input(
+                "mutation_rate", value=0.05, min_value=0.05, max_value=0.9, step=0.05
+            )
+            cross_rate = st.number_input(
+                "crossover_rate", value=0.1, min_value=0.05, max_value=0.9, step=0.1
+            )
+            elite_rate = st.number_input(
+                "elite_rate", value=0.1, min_value=0.05, max_value=0.9, step=0.1
+            )
 
         text_input = st.text_input(
             label="input_array",
@@ -187,10 +194,7 @@ with st.sidebar:
 
 
 def get_grid_df_from_dice_array(dice_array):
-    # Take every other element from the dice_array (as str) and the text_array, and
-    # add them to a new flat list.
-    # Make sure the flat list has 28 elements.
-    # Then, reshape the list into a 4x7 matrix and then pandas DataFrame
+    # Create a grid to represent the board from the dice array
     text_array = ["+", "=", "", "", "-", "=", "", "", ":", "=", "+/-", "x", "=", "+/-"]
     text_positions = [1, 3, 5, 6, 8, 10, 12, 13, 15, 17, 19, 22, 24, 26]
     flat_list = []
@@ -208,8 +212,24 @@ def get_grid_df_from_dice_array(dice_array):
     return pd.DataFrame(grid)
 
 
-rows = 2
-cols = 7
+# def make_grid(cols, rows):
+#     grid = [0] * cols
+#     for i in range(cols):
+#         with st.container():
+#             grid[i] = st.columns(rows)
+#     return grid
+
+
+# def write_grid(cols, rows, dice_array):
+#     grid = make_grid(rows, cols)
+#     for r in range(rows):
+#         for c in range(cols):
+#             num = (r * cols) + c
+#             grid[r][c].button(f"{dice_array[num]}", key=f"{r}_{c}+", disabled=True)
+#     return
+
+# rows = 2
+# cols = 7
 # st.markdown("## Dice values")
 # write_grid(cols, rows, st.session_state["dice_array"])
 
@@ -225,10 +245,13 @@ def style_cell(x, correct=False):
 
 
 def style_row(row):
-    return [style_cell(c, correct=(st.session_state["correct_equations"][row.name])) for c in row]
+    return [
+        style_cell(c, correct=(st.session_state["correct_equations"][row.name]))
+        for c in row
+    ]
 
 
-def get_df_html():
+def get_df_html(font_size="150%"):
     dice_array = st.session_state.get("dice_array")
     df = get_grid_df_from_dice_array(dice_array)
     props = [
@@ -236,7 +259,7 @@ def get_df_html():
         {
             "selector": "tbody",
             "props": [
-                ("font-size", "200%"),
+                ("font-size", font_size),
                 ("text-align", "center"),
                 ("border", "2px solid black"),
             ],
@@ -246,7 +269,12 @@ def get_df_html():
             "props": [("border", "10px solid black"), ("font-weight", "bold")],
         },
     ]
-    style_df = df.style.apply(style_row, axis=1).hide(axis=1).hide(axis=0).set_table_styles(props)
+    style_df = (
+        df.style.apply(style_row, axis=1)
+        .hide(axis=1)
+        .hide(axis=0)
+        .set_table_styles(props)
+    )
 
     df_html = style_df.to_html()
     return df_html
@@ -265,7 +293,12 @@ def millify(n):
     # E.g. 1100 -> 1.1K, 2100000 -> 2.1M
     millnames = ["", "K", "M", "B", "T"]
     n = float(n)
-    millidx = max(0, min(len(millnames) - 1, int(math.floor(0 if n == 0 else math.log10(abs(n)) / 3))))
+    millidx = max(
+        0,
+        min(
+            len(millnames) - 1, int(math.floor(0 if n == 0 else math.log10(abs(n)) / 3))
+        ),
+    )
     return "{:.1f}{}".format(n / 10 ** (3 * millidx), millnames[millidx])
 
 
@@ -280,7 +313,8 @@ with cols[2]:
 
 
 st.markdown("## Current solution (Submit to solve👈)")
-df_html = get_df_html()
+df_html = get_df_html("100%")
+
 st.markdown(df_html, unsafe_allow_html=True)
 
 cols = st.columns(3)
@@ -293,12 +327,10 @@ with cols[1]:
         help="👈 Submit to solve first"
         if ("call_id" not in st.session_state) or st.session_state["time_left"] == 0
         else "",
-        disabled=("call_id" not in st.session_state) or st.session_state["time_left"] == 0,
+        disabled=("call_id" not in st.session_state)
+        or st.session_state["time_left"] == 0,
         on_click=poll_results,
     )
 
 if all(st.session_state["correct_equations"]):
     st.balloons()
-# st.session_state["dice_array"]
-# st.session_state["correct_equations"]
-# components.html(df_html, width=1000, height=600)

@@ -2,6 +2,7 @@ import numpy as np
 from numba import jit
 import logging
 from warnings import filterwarnings
+from itertools import permutations
 
 filterwarnings("ignore")
 
@@ -11,7 +12,9 @@ def get_logger():
     logger.setLevel(logging.INFO)
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     return logger
@@ -21,7 +24,15 @@ logger = get_logger()
 
 
 class Population(object):
-    def __init__(self, size, dice_throw, cross_rate=0.1, mut_rate=0.05, elite_rate=0.1, num_generations=1000):
+    def __init__(
+        self,
+        size,
+        dice_throw,
+        cross_rate=0.1,
+        mut_rate=0.05,
+        elite_rate=0.1,
+        num_generations=1000,
+    ):
         self.size = size
         self.num_dice = 14
         self.num_pos = 14
@@ -30,13 +41,25 @@ class Population(object):
         self.dice_values = self.get_dice_values()
         self.fitness = np.zeros(self.size, dtype=np.int32)
         self.mask = np.zeros((self.size, 4), dtype=bool)
-        self.crossover_rate = cross_rate  # The percentage of the population that will be crossed over
-        self.num_crossover = int(self.size * self.crossover_rate)  # The number of individuals that will be crossed over
-        self.mutation_rate = mut_rate  # The percentage of the population that will be mutated
-        self.num_mutated = int(self.size * self.mutation_rate)  # The number of individuals that will be mutated
+        self.crossover_rate = (
+            cross_rate  # The percentage of the population that will be crossed over
+        )
+        self.num_crossover = int(
+            self.size * self.crossover_rate
+        )  # The number of individuals that will be crossed over
+        self.mutation_rate = (
+            mut_rate  # The percentage of the population that will be mutated
+        )
+        self.num_mutated = int(
+            self.size * self.mutation_rate
+        )  # The number of individuals that will be mutated
         self.elitism = elite_rate  # The percentage of the population that will be kept as is for the next generation
-        self.num_elite = int(self.size * self.elitism)  # The number of elite individuals
-        self.num_elite_improve = 10  # The number of elite individuals that will be improved
+        self.num_elite = int(
+            self.size * self.elitism
+        )  # The number of elite individuals
+        self.num_elite_improve = (
+            10  # The number of elite individuals that will be improved
+        )
         self.equation_positions = [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]
         self.generation = 0
         self.num_generations = num_generations
@@ -49,7 +72,9 @@ class Population(object):
         logger.setLevel(logging.INFO)
         ch = logging.StreamHandler()
         ch.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        )
         ch.setFormatter(formatter)
         logger.addHandler(ch)
         return logger
@@ -65,24 +90,36 @@ class Population(object):
     def calc_fitness(self):
         # Calculate the fitness of each self.best_solution by summing the values of the dice that are successfully placed on the equation board
         # Equation 1: dice1 + dice2 = dice3
-        self.mask[:, 0] = self.dice_values[:, 0] + self.dice_values[:, 1] == self.dice_values[:, 2]
+        self.mask[:, 0] = (
+            self.dice_values[:, 0] + self.dice_values[:, 1] == self.dice_values[:, 2]
+        )
         self.fitness += self.mask[:, 0] * self.dice_values[:, 0:3].sum(axis=1)
         # Equation 2: dice4 - dice5 = dice6
-        self.mask[:, 1] = self.dice_values[:, 3] - self.dice_values[:, 4] == self.dice_values[:, 5]
+        self.mask[:, 1] = (
+            self.dice_values[:, 3] - self.dice_values[:, 4] == self.dice_values[:, 5]
+        )
         self.fitness += self.mask[:, 1] * self.dice_values[:, 3:6].sum(axis=1)
         # Equation 3: dice7 x dice8 = dice9 +/- dice10
-        mask3_1 = self.dice_values[:, 6] * self.dice_values[:, 7] == self.dice_values[:, 8] + self.dice_values[:, 9]
-        mask3_2 = self.dice_values[:, 6] * self.dice_values[:, 7] == self.dice_values[:, 8] - self.dice_values[:, 9]
+        mask3_1 = (
+            self.dice_values[:, 6] * self.dice_values[:, 7]
+            == self.dice_values[:, 8] + self.dice_values[:, 9]
+        )
+        mask3_2 = (
+            self.dice_values[:, 6] * self.dice_values[:, 7]
+            == self.dice_values[:, 8] - self.dice_values[:, 9]
+        )
         self.mask[:, 2] = mask3_1 | mask3_2
         self.fitness += self.mask[:, 2] * self.dice_values[:, 6:10].sum(axis=1)
         # Equation 4: dice11 : dice12 = dice13 +/- dice14
         # 4.1: Check if dice7 is divisible by dice8
         mask4_1 = self.dice_values[:, 10] % self.dice_values[:, 11] == 0
         mask4_2 = (
-            self.dice_values[:, 10] // self.dice_values[:, 11] == self.dice_values[:, 12] + self.dice_values[:, 13]
+            self.dice_values[:, 10] // self.dice_values[:, 11]
+            == self.dice_values[:, 12] + self.dice_values[:, 13]
         )
         mask4_3 = (
-            self.dice_values[:, 10] // self.dice_values[:, 11] == self.dice_values[:, 12] - self.dice_values[:, 13]
+            self.dice_values[:, 10] // self.dice_values[:, 11]
+            == self.dice_values[:, 12] - self.dice_values[:, 13]
         )
         self.mask[:, 3] = mask4_1 & (mask4_2 | mask4_3)
         self.fitness += self.mask[:, 3] * self.dice_values[:, 6:10].sum(axis=1)
@@ -113,7 +150,9 @@ class Population(object):
             child_values[solved_pos] = mother_values
             self.logger.debug(f"Child values: {child_values}")
             # Could loop through all parents, but for now just take the father from the bottom
-            father_values = self.dice_values[crossover_indices[-i], ~np.isin(np.arange(self.num_pos), solved_pos)]
+            father_values = self.dice_values[
+                crossover_indices[-i], ~np.isin(np.arange(self.num_pos), solved_pos)
+            ]
             self.logger.debug(f"Father values: {father_values}")
             # Make the child
             child_values = np.concatenate((mother_values, father_values))
@@ -160,7 +199,9 @@ class Population(object):
                 self.dice_values[m, unsolved_pos] = self.dice_values[m, p]
                 self.calc_fitness()
                 if self.fitness[m] > original_score:
-                    self.logger.debug(f"Improved elite {i} from {original_score} to {self.fitness[m]}")
+                    self.logger.debug(
+                        f"Improved elite {i} from {original_score} to {self.fitness[m]}"
+                    )
                     break
                 else:
                     self.dice_values[m] = original_values
@@ -180,19 +221,27 @@ class Population(object):
         fitness_sorted = np.argsort(self.fitness)[::-1]
         elite_indices = fitness_sorted[: self.num_elite]
         # self.improve_elite(elite_indices)
-        crossover_indices = fitness_sorted[self.num_elite : (self.num_elite + self.num_crossover)]
+        crossover_indices = fitness_sorted[
+            self.num_elite : (self.num_elite + self.num_crossover)
+        ]
         self.crossover(crossover_indices)
         # Find mutation indices by choosing from non elite indices and non crossover indices
         mutation_indices = np.random.choice(
-            np.setdiff1d(np.arange(self.size), np.concatenate((elite_indices, crossover_indices))),
+            np.setdiff1d(
+                np.arange(self.size), np.concatenate((elite_indices, crossover_indices))
+            ),
             size=self.num_mutated,
             replace=False,
         )
         self.mutate(mutation_indices)
         # Keep individuals that are in elite, crossover, and mutated
-        keep_indices = np.concatenate((elite_indices, crossover_indices, mutation_indices))
+        keep_indices = np.concatenate(
+            (elite_indices, crossover_indices, mutation_indices)
+        )
         keep_values = self.dice_values[keep_indices].copy()
-        fresh_values = self.get_dice_values(n=self.size - self.num_elite - self.num_crossover - self.num_mutated)
+        fresh_values = self.get_dice_values(
+            n=self.size - self.num_elite - self.num_crossover - self.num_mutated
+        )
         # Combine the elite, crossover, mutated, and fresh positions
         self.dice_values = np.vstack((keep_values, fresh_values))
         return
@@ -214,11 +263,15 @@ class Population(object):
         print("Best solution:")
         print(f"Fitness: {self.best_fitness}")
         print(
-            f"{self.best_solution[0]} + {self.best_solution[1]} = {self.best_solution[2]}".ljust(20)
+            f"{self.best_solution[0]} + {self.best_solution[1]} = {self.best_solution[2]}".ljust(
+                20
+            )
             + f"Correct: {self.correct_equations[0]}"
         )
         print(
-            f"{self.best_solution[3]} - {self.best_solution[4]} = {self.best_solution[5]}".ljust(20)
+            f"{self.best_solution[3]} - {self.best_solution[4]} = {self.best_solution[5]}".ljust(
+                20
+            )
             + f"Correct: {self.correct_equations[1]}"
         )
         print(
@@ -249,19 +302,23 @@ def check_solution(dice_array):
     # Check if the solution is correct
     correct_equations = [False, False, False, False]
     score = 0
-    eq1 = dice_array[0] + dice_array[1] == dice_array[2]
+    eq1 = (dice_array[0] + dice_array[1]) == dice_array[2]
     if eq1:
         correct_equations[0] = True
         score += sum(dice_array[:3])
-    eq2 = dice_array[3] - dice_array[4] == dice_array[5]
+    eq2 = (dice_array[3] - dice_array[4]) == dice_array[5]
     if eq2:
         correct_equations[1] = True
         score += sum(dice_array[3:6])
-    eq3 = (dice_array[6] / dice_array[7]) == ((dice_array[8] + dice_array[9]) | (dice_array[8]) - (dice_array[9]))
+    eq3 = (dice_array[6] / dice_array[7]) == (
+        (dice_array[8] + dice_array[9]) | (dice_array[8]) - (dice_array[9])
+    )
     if eq3:
         correct_equations[2] = True
         score += sum(dice_array[6:10])
-    eq4 = (dice_array[10] * dice_array[11]) == (dice_array[12] + dice_array[13]) | (dice_array[12] - dice_array[13])
+    eq4 = (dice_array[10] * dice_array[11]) == (dice_array[12] + dice_array[13]) | (
+        dice_array[12] - dice_array[13]
+    )
     if eq4:
         correct_equations[3] = True
         score += sum(dice_array[10:])
