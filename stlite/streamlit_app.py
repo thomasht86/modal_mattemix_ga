@@ -142,7 +142,11 @@ with st.sidebar:
         cols = st.columns(2)
         with cols[0]:
             pop_size = st.slider(
-                "pop_size", value=50000, max_value=1000000, min_value=1000, step=1000
+                "pop_size",
+                value=500000,
+                max_value=1000000,
+                min_value=10000,
+                step=100000,
             )
             timeout = st.number_input("timeout", min_value=5, max_value=60, value=60)
             num_populations = st.number_input(

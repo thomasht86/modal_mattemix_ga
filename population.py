@@ -58,7 +58,7 @@ class Population(object):
             self.size * self.elitism
         )  # The number of elite individuals
         self.num_elite_improve = (
-            10  # The number of elite individuals that will be improved
+            5  # The number of elite individuals that will be improved
         )
         self.equation_positions = [[0, 1, 2], [3, 4, 5], [6, 7, 8, 9], [10, 11, 12, 13]]
         self.generation = 0
@@ -223,7 +223,9 @@ class Population(object):
         self.correct_equations = self.mask[best_index].copy()
         elite_indices = fitness_sorted[: self.num_elite]
         # Only improve if score is better than 60% of optimal
-        # if self.best_fitness > 0.6 * self.dice_throw.sum():
+        # if self.correct_equations.sum() == 3:
+        #     self.logger.debug("Improving elite")
+        #     self.improve_elite(elite_indices)
         #    self.logger.debug("Improving elite")
         # self.improve_elite(elite_indices)
         crossover_indices = fitness_sorted[
