@@ -111,18 +111,16 @@ class Population(object):
         self.mask[:, 2] = mask3_1 | mask3_2
         self.fitness += self.mask[:, 2] * self.dice_values[:, 6:10].sum(axis=1)
         # Equation 4: dice11 : dice12 = dice13 +/- dice14
-        # 4.1: Check if dice7 is divisible by dice8
-        mask4_1 = self.dice_values[:, 10] % self.dice_values[:, 11] == 0
-        mask4_2 = (
-            self.dice_values[:, 10] // self.dice_values[:, 11]
+        mask4_1 = (
+            self.dice_values[:, 10] / self.dice_values[:, 11]
             == self.dice_values[:, 12] + self.dice_values[:, 13]
         )
-        mask4_3 = (
-            self.dice_values[:, 10] // self.dice_values[:, 11]
+        mask4_2 = (
+            self.dice_values[:, 10] / self.dice_values[:, 11]
             == self.dice_values[:, 12] - self.dice_values[:, 13]
         )
-        self.mask[:, 3] = mask4_1 & (mask4_2 | mask4_3)
-        self.fitness += self.mask[:, 3] * self.dice_values[:, 6:10].sum(axis=1)
+        self.mask[:, 3] = mask4_1 | mask4_2
+        self.fitness += self.mask[:, 3] * self.dice_values[:, 10:].sum(axis=1)
         return
 
     @jit
@@ -216,10 +214,17 @@ class Population(object):
         self.mask = np.zeros((self.size, 4), dtype=bool)
         # Calculate the fitness of the current generation
         self.calc_fitness()
-        self.print_best_solution()
+        # self.print_best_solution()
         # Get the elite indices
         fitness_sorted = np.argsort(self.fitness)[::-1]
+        best_index = fitness_sorted[0]
+        self.best_solution = self.dice_values[best_index].copy()
+        self.best_fitness = self.fitness[best_index].copy()
+        self.correct_equations = self.mask[best_index].copy()
         elite_indices = fitness_sorted[: self.num_elite]
+        # Only improve if score is better than 60% of optimal
+        # if self.best_fitness > 0.6 * self.dice_throw.sum():
+        #    self.logger.debug("Improving elite")
         # self.improve_elite(elite_indices)
         crossover_indices = fitness_sorted[
             self.num_elite : (self.num_elite + self.num_crossover)
@@ -310,13 +315,13 @@ def check_solution(dice_array):
     if eq2:
         correct_equations[1] = True
         score += sum(dice_array[3:6])
-    eq3 = (dice_array[6] / dice_array[7]) == (
+    eq3 = (dice_array[6] * dice_array[7]) == (
         (dice_array[8] + dice_array[9]) | (dice_array[8]) - (dice_array[9])
     )
     if eq3:
         correct_equations[2] = True
         score += sum(dice_array[6:10])
-    eq4 = (dice_array[10] * dice_array[11]) == (dice_array[12] + dice_array[13]) | (
+    eq4 = (dice_array[10] / dice_array[11]) == (dice_array[12] + dice_array[13]) | (
         dice_array[12] - dice_array[13]
     )
     if eq4:

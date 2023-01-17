@@ -142,7 +142,7 @@ with st.sidebar:
         cols = st.columns(2)
         with cols[0]:
             pop_size = st.slider(
-                "pop_size", value=50000, max_value=100000, min_value=1000, step=1000
+                "pop_size", value=50000, max_value=1000000, min_value=1000, step=1000
             )
             timeout = st.number_input("timeout", min_value=5, max_value=60, value=60)
             num_populations = st.number_input(
@@ -195,7 +195,7 @@ with st.sidebar:
 
 def get_grid_df_from_dice_array(dice_array):
     # Create a grid to represent the board from the dice array
-    text_array = ["+", "=", "", "", "-", "=", "", "", ":", "=", "+/-", "x", "=", "+/-"]
+    text_array = ["+", "=", "", "", "-", "=", "", "", "x", "=", "+/-", ":", "=", "+/-"]
     text_positions = [1, 3, 5, 6, 8, 10, 12, 13, 15, 17, 19, 22, 24, 26]
     flat_list = []
     dice_ind = 0

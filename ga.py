@@ -68,7 +68,6 @@ def find_solution(seed, call_id: str):
             )
         update_dict.update(
             {
-                "time_left": int(max([max_time - (time.time() - start_time), 0])),
                 "num_tested": update_dict.get("num_tested") + pop.generation * size,
             }
         )
@@ -90,7 +89,7 @@ async def init_solve_job(
         description="Comma-separated list of 14 integers between 1 and 15",
         regex=r"^(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9]),(1[0-5]|[1-9])$",
     ),
-    pop_size: int = Query(50000, ge=1000, le=100000),
+    pop_size: int = Query(50000, ge=1000, le=1000000),
     timeout: int = Query(60, ge=1, le=60),
     num_populations: int = Query(1, ge=1, le=3),
     mut_rate: float = Query(0.05, ge=0.01, le=0.9),
@@ -101,6 +100,7 @@ async def init_solve_job(
     from modal import container_app
     from uuid import uuid4
     from population import check_solution
+    import time
 
     # Generate a unique call id
     call_id = str(uuid4())
@@ -117,6 +117,7 @@ async def init_solve_job(
         "pop_size": pop_size,
         "num_tested": 0,
         "max_time": timeout,
+        "start_time": time.time(),
         "time_left": timeout,
         "num_populations": num_populations,
         "mut_rate": mut_rate,
@@ -138,6 +139,15 @@ async def poll_results(call_id: str):
     import time
 
     caller_dict = container_app.dict.get(call_id)
+    caller_dict["time_left"] = int(
+        max(
+            [
+                caller_dict.get("max_time")
+                - (time.time() - caller_dict.get("start_time")),
+                0,
+            ]
+        )
+    )
     return caller_dict
 
 
